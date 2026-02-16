@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SUPERSOCCER</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Barlow:wght@400;700;900&display=swap');
+
+        :root {
+            --fc-green: #ccff00;
+            --fc-blue: #00e5ff;
+            --fc-pink: #ff007a;
+            --dark-bg: #050d14;
+            /* Colores de Posición */
+            --color-gk: #ffd700;    /* Amarillo Portero */
+            --color-def: #007bff;   /* Azul Defensa */
+            --color-mid: #00ff88;   /* Verde Medio */
+            --color-att: #ff4444;   /* Rojo Delantero */
+        }
+
+        body {
+            font-family: 'Barlow', sans-serif;
+            background-color: var(--dark-bg);
+            background-image: 
+                radial-gradient(circle at 50% 10%, rgba(0, 229, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 90%, rgba(204, 255, 0, 0.05) 0%, transparent 50%);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow-y: auto;
+            text-transform: uppercase;
+        }
+
+        .match-engine {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 1000px;
+            padding: 40px 20px;
+            box-sizing: border-box;
+            min-height: 100vh;
+        }
+
+        .phase-badge {
+            font-weight: 900;
+            font-size: 0.9rem;
+            color: var(--fc-green);
+            letter-spacing: 3px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--fc-green);
+            padding-bottom: 5px;
+        }
+
+        /* --- CARTAS Y DUELO --- */
+        .duel-stage {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .fc-card {
+            width: 280px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            transition: all 0.5s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        @keyframes attackerPulse {
+            0% { box-shadow: 0 0 0px rgba(204, 255, 0, 0); border-color: rgba(255,255,255,0.1); }
+            50% { box-shadow: 0 0 30px rgba(255, 255, 255, 0.2); border-color: white; }
+            100% { box-shadow: 0 0 0px rgba(204, 255, 0, 0); border-color: rgba(255,255,255,0.1); }
+        }
+
+        .attacking {
+            animation: attackerPulse 1.5s infinite ease-in-out;
+            background: rgba(255, 255, 255, 0.05);
+            transform: scale(1.05);
+            z-index: 2;
+        }
+
+        .role-name {
+            font-size: 2.5rem;
+            font-weight: 900;
+            transition: color 0.3s ease;
+        }
+
+        .team-name {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #888;
+            margin-top: 5px;
+            letter-spacing: 2px;
+        }
+
+        .vs-icon {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: #444;
+            font-style: italic;
+        }
+
+        /* --- PANEL DE DATOS --- */
+        .data-panel {
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+        }
+
+        .instruction-text {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--fc-blue);
+            margin-bottom: 15px;
+            min-height: 1.5em;
+        }
+
+        .dice-result {
+            background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 100%);
+            border: 1px solid rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-icon { font-size: 2.5rem; margin-bottom: 5px; }
+        .stat-name {
+            font-size: 2.2rem;
+            font-weight: 900;
+            font-family: 'Archivo Black', sans-serif;
+            color: var(--fc-green);
+        }
+
+        /* --- BOTONES --- */
+        .btn-action {
+            margin-top: 30px;
+            margin-bottom: 50px;
+            background: #fff;
+            color: #000;
+            border: none;
+            padding: 18px 50px;
+            font-size: 1.1rem;
+            font-weight: 900;
+            cursor: pointer;
+            clip-path: polygon(5% 0%, 100% 0%, 95% 100%, 0% 100%);
+            transition: 0.3s;
+        }
+
+        .btn-action:hover { background: var(--fc-green); transform: scale(1.05); }
+        .btn-next { background: var(--fc-blue); }
+        .btn-penalty { background: var(--fc-pink); color: white; }
+
+        /* MODAL */
+        .modal {
+            display: none; position: fixed; top:0; left:0; width:100%; height:100%;
+            background: var(--dark-bg); z-index: 100;
+            flex-direction: column; align-items: center; justify-content: center;
+            text-align: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .event-card {
+            background: rgba(255,255,255,0.05);
+            border: 2px solid var(--fc-green);
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="match-engine">
+        <div class="phase-badge" id="phaseText">FASE 01 / 20</div>
+
+        <div class="duel-stage">
+            <div class="fc-card" id="cardL">
+                <div class="role-name" id="roleL">DEFENSA</div>
+                <div class="team-name">EQUIPO LOCAL</div>
+            </div>
+
+            <div class="vs-icon">VS</div>
+
+            <div class="fc-card" id="cardR">
+                <div class="role-name" id="roleR">DEFENSA</div>
+                <div class="team-name">EQUIPO VISITANTE</div>
+            </div>
+        </div>
+
+        <div class="data-panel">
+            <div class="instruction-text" id="msg">PREPARANDO JUGADA...</div>
+            <div class="dice-result">
+                <div class="stat-icon" id="statIcon">🎲</div>
+                <div class="stat-name" id="statName">ESPERANDO</div>
+            </div>
+        </div>
+
+        <button class="btn-action" id="mainBtn" onclick="processPhase()">LANZAR DADO</button>
+    </div>
+
+    <div class="modal" id="modalFinal">
+        <div class="phase-badge">POST-PARTIDO: EVENTO DE LIGA</div>
+        <div class="event-card">
+            <div class="stat-icon" id="evIcon" style="font-size: 4rem;">🎲</div>
+            <h2 id="evTitle" style="color: var(--fc-green); margin: 10px 0;">EVENTO</h2>
+            <p id="evMsg" style="font-size: 1.4rem; line-height: 1.2; margin-bottom: 20px;"></p>
+            <div id="penaltyZone" style="display: none;">
+                <div id="penaltyResult" style="font-size: 2rem; font-weight: 900; margin: 10px 0; min-height: 1.2em;"></div>
+                <button class="btn-action btn-penalty" id="btnShoot" onclick="shootPenalty()">LANZAR PENALTI</button>
+            </div>
+        </div>
+        <button class="btn-action" id="btnNextJornada" onclick="location.reload()" style="margin-top: 30px;">SIGUIENTE JORNADA</button>
+    </div>
+
+<script>
+    let currentIdx = 0;
+    let isWaiting = false;
+
+    const statsConfig = {
+        1: { name: "RITMO", icon: "⚡" },
+        2: { name: "TIRO", icon: "⚽" },
+        3: { name: "PASE", icon: "🎯" },
+        4: { name: "REGATE", icon: "🪄" },
+        5: { name: "DEFENSA", icon: "🛡️" },
+        6: { name: "FÍSICO", icon: "💪" }
+    };
+
+    const equipos = ["Real Betis", "Sevilla", "Real Madrid", "Barcelona", "Atlético de Madrid", "Athletic", "Valencia", "Villarreal"];
+    const posiciones = ["Portero", "Defensa", "Medio Izquierdo", "Medio Derecho", "Delantero"];
+
+    // Lógica de colores según el texto
+    function getPositionColor(role) {
+        if (role.includes("PORTERO")) return "var(--color-gk)";
+        if (role.includes("DEFENSA")) return "var(--color-def)";
+        if (role.includes("MEDIO")) return "var(--color-mid)";
+        if (role.includes("DELANTERO")) return "var(--color-att)";
+        return "white";
+    }
+
+    const corePos = ["DEFENSA", "MEDIO IZQ", "MEDIO DER", "DELANTERO", "DELANTERO"];
+    const sequence = [];
+
+    corePos.forEach(p => {
+        sequence.push({ l: p, r: "DEFENSA", msg: "ATAQUE LOCAL", atk: "L" });
+        sequence.push({ l: p, r: "PORTERO", msg: "¡LOCAL A PUERTA!", atk: "L" });
+        sequence.push({ l: "DEFENSA", r: p, msg: "ATAQUE VISITANTE", atk: "V" });
+        sequence.push({ l: "PORTERO", r: p, msg: "¡VISITANTE A PUERTA!", atk: "V" });
+    });
+
+    function updateView() {
+        const data = sequence[currentIdx];
+        document.getElementById('phaseText').innerText = `FASE ${String(currentIdx + 1).padStart(2, '0')} / ${sequence.length}`;
+        
+        const rL = document.getElementById('roleL');
+        const rR = document.getElementById('roleR');
+        
+        rL.innerText = data.l;
+        rR.innerText = data.r;
+        
+        // Aplicar Colores Dinámicos
+        rL.style.color = getPositionColor(data.l);
+        rR.style.color = getPositionColor(data.r);
+        
+        // Resplandor de texto (Text Shadow)
+        rL.style.textShadow = `0 0 15px ${getPositionColor(data.l)}66`;
+        rR.style.textShadow = `0 0 15px ${getPositionColor(data.r)}66`;
+
+        document.getElementById('msg').innerText = data.msg;
+
+        document.getElementById('cardL').classList.remove('attacking');
+        document.getElementById('cardR').classList.remove('attacking');
+
+        if(data.atk === "L") {
+            document.getElementById('cardL').classList.add('attacking');
+            document.getElementById('msg').style.color = "var(--fc-green)";
+        } else {
+            document.getElementById('cardR').classList.add('attacking');
+            document.getElementById('msg').style.color = "var(--fc-pink)";
+        }
+    }
+
+    function processPhase() {
+        const btn = document.getElementById('mainBtn');
+        if (!isWaiting) {
+            let rolls = 0;
+            const anim = setInterval(() => {
+                const temp = Math.floor(Math.random() * 6) + 1;
+                document.getElementById('statName').innerText = statsConfig[temp].name;
+                document.getElementById('statIcon').innerText = statsConfig[temp].icon;
+                rolls++;
+                if(rolls > 10) {
+                    clearInterval(anim);
+                    const finalRoll = Math.floor(Math.random() * 6) + 1;
+                    document.getElementById('statName').innerText = statsConfig[finalRoll].name;
+                    document.getElementById('statIcon').innerText = statsConfig[finalRoll].icon;
+                    btn.innerText = "SIGUIENTE FASE";
+                    btn.classList.add('btn-next');
+                    isWaiting = true;
+                }
+            }, 60);
+        } else {
+            currentIdx++;
+            if(currentIdx >= sequence.length) {
+                showFinalEvent();
+            } else {
+                isWaiting = false;
+                btn.innerText = "LANZAR DADO";
+                btn.classList.remove('btn-next');
+                document.getElementById('statIcon').innerText = "🎲";
+                document.getElementById('statName').innerText = "ESPERANDO";
+                updateView();
+            }
+        }
+    }
+
+    function getRand(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+    function showFinalEvent() {
+        document.getElementById('modalFinal').style.display = 'flex';
+        const ev = Math.floor(Math.random() * 6) + 1;
+        const equipo = getRand(equipos);
+        const pos = getRand(posiciones);
+        
+        let msg = "";
+        switch(ev) {
+            case 1: msg = `VAR: SE ANULA EL ÚLTIMO GOL MARCADO POR EL <strong>${equipo}</strong>.`; break;
+            case 2:
+                const semanas = Math.floor(Math.random() * 6) + 1;
+                msg = `LESIONADO EL <strong>${pos}</strong> DEL <strong>${equipo}</strong>. ESTARÁ <strong>${semanas}</strong> SEMANAS SIN JUGAR.`;
+                break;
+            case 3: msg = `EXPULSADO EL <strong>${pos}</strong> DEL <strong>${equipo}</strong>. ESTARÁ <strong>1 PARTIDO</strong> SIN JUGAR.`; break;
+            case 4:
+                msg = `PENALTI A FAVOR DEL <strong>${equipo}</strong>. CON 4, 5 O 6 ES GOL.`;
+                document.getElementById('penaltyZone').style.display = 'block';
+                document.getElementById('btnNextJornada').style.visibility = 'hidden';
+                break;
+            case 5: msg = `EL <strong>${pos}</strong> DEL <strong>${equipo}</strong> HA PAGADO SU CLÁUSULA Y SE HA MARCHADO A OTRO EQUIPO.`; break;
+            case 6:
+                const esMulta = Math.random() > 0.5;
+                msg = esMulta ? 
+                    `EL <strong>${equipo}</strong> HA SIDO MULTADO CON <strong>10 MILLONES</strong>.` : 
+                    `EL <strong>${equipo}</strong> HA INGRESADO <strong>10 MILLONES</strong> POR PUBLICIDAD.`;
+                break;
+        }
+
+        document.getElementById('evIcon').innerText = "🎲 " + ev;
+        document.getElementById('evMsg').innerHTML = msg;
+    }
+
+    function shootPenalty() {
+        const roll = Math.floor(Math.random() * 6) + 1;
+        const resDiv = document.getElementById('penaltyResult');
+        const isGoal = roll >= 4;
+        resDiv.innerText = `DADO: ${roll} -> ${isGoal ? "¡GOOOL!" : "¡FALLO!"}`;
+        resDiv.style.color = isGoal ? "var(--fc-green)" : "var(--fc-pink)";
+        document.getElementById('btnShoot').style.display = 'none';
+        document.getElementById('btnNextJornada').style.visibility = 'visible';
+    }
+
+    updateView();
+</script>
+</body>
+</html>
