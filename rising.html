@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cthulhu Rising - Asistente del Esbirro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0d0d0d;
+            --text-color: #d4c4a8;
+            --accent-color: #8a0303;
+            --border-color: #2a2a2a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at center, #1a1a1a 0%, #000000 100%);
+            color: var(--text-color);
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 18px;
+            line-height: 1.6;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Ambient overlay for Lovecraftian vibe */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: url('data:image/svg+xml;utf8,%3Csvg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"%3E%3Cfilter id="noiseFilter"%3E%3CfeTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/%3E%3C/filter%3E%3Crect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.05"/%3E%3C/svg%3E');
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        h1, h2, h3 {
+            font-family: 'Cinzel Decorative', cursive;
+            color: var(--accent-color);
+            text-align: center;
+            text-shadow: 2px 2px 4px #000;
+            margin-bottom: 15px;
+        }
+
+        h1 { font-size: 2.2em; letter-spacing: 2px; }
+        h2 { font-size: 1.8em; border-bottom: 1px solid var(--accent-color); padding-bottom: 10px; }
+
+        /* Navigation Menu */
+        nav {
+            position: fixed;
+            top: 0; width: 100%;
+            background: rgba(10, 10, 10, 0.95);
+            border-bottom: 1px solid var(--accent-color);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            padding: 10px 0;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+        }
+
+        nav a {
+            color: var(--text-color);
+            text-decoration: none;
+            margin: 5px 15px;
+            font-family: 'Cinzel Decorative', cursive;
+            font-size: 14px;
+            transition: color 0.3s, text-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        nav a:hover, nav a.active-link {
+            color: var(--accent-color);
+            text-shadow: 0 0 8px rgba(138, 3, 3, 0.8);
+        }
+
+        /* Arrows */
+        .nav-btn {
+            position: fixed;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(10,10,10,0.6);
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            font-family: 'Cinzel Decorative', cursive;
+            font-size: 2em;
+            padding: 15px;
+            cursor: pointer;
+            z-index: 100;
+            transition: all 0.3s;
+            border-radius: 5px;
+        }
+
+        .nav-btn:hover {
+            background: var(--accent-color);
+            color: #000;
+            box-shadow: 0 0 15px var(--accent-color);
+        }
+
+        #prev-btn { left: 20px; }
+        #next-btn { right: 20px; }
+
+        /* Content Container */
+        .container {
+            max-width: 800px;
+            margin: 100px auto 40px auto;
+            padding: 40px;
+            background: rgba(15, 15, 15, 0.85);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 0 30px rgba(0,0,0,0.9);
+            position: relative;
+        }
+
+        .screen {
+            display: none;
+            animation: fadeIn 0.6s ease-in-out;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Customizing text elements */
+        ul { list-style-type: none; padding-left: 20px; }
+        ul li { position: relative; margin-bottom: 10px; }
+        ul li::before {
+            content: '⟡';
+            position: absolute;
+            left: -20px;
+            color: var(--accent-color);
+        }
+        
+        .highlight { color: #fff; font-weight: bold; }
+        .alert-box {
+            border-left: 4px solid var(--accent-color);
+            background: rgba(138, 3, 3, 0.1);
+            padding: 15px;
+            margin: 20px 0;
+            font-style: italic;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            text-align: left;
+        }
+        th { color: var(--accent-color); font-family: 'Cinzel Decorative', cursive; }
+
+        @media (max-width: 900px) {
+            .nav-btn { bottom: 10px; top: auto; transform: none; font-size: 1.5em; padding: 10px; }
+            #prev-btn { left: 10px; }
+            #next-btn { right: 10px; }
+            .container { margin: 120px 10px 80px 10px; padding: 20px; }
+        }
+
+/* Estilos del botón de música */
+        #music-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(10, 10, 10, 0.9);
+            border: 1px solid var(--accent-color);
+            color: var(--text-color);
+            font-family: 'Cinzel Decorative', cursive;
+            padding: 10px 15px;
+            cursor: pointer;
+            z-index: 1000;
+            border-radius: 5px;
+            transition: all 0.3s;
+            box-shadow: 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        #music-btn:hover {
+            background: var(--accent-color);
+            color: #000;
+            box-shadow: 0 0 15px var(--accent-color);
+        }
+
+        /* Ajuste para móviles para que no tape el botón de la flecha izquierda */
+        @media (max-width: 900px) {
+            #music-btn {
+                bottom: 70px;
+                left: 10px;
+                font-size: 14px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+<!-- Elementos de música de fondo -->
+    <audio id="bg-music" loop>
+        <source src="ambiente.mp3" type="audio/mpeg">
+    </audio>
+    <button id="music-btn" onclick="toggleMusic()">🔇 Música Off</button>
+
+    <nav id="menu">
+        <a onclick="goToScreen(0)">Preparación</a>
+        <a onclick="goToScreen(1)">Reglas Base</a>
+        <a onclick="goToScreen(2)">1.2. Recuperación y Robo</a>
+        <a onclick="goToScreen(3)">3. Eventos y Recursos</a>
+        <a onclick="goToScreen(4)">4. Operaciones</a>
+        <a onclick="goToScreen(5)">5. Historia (Esbirro)</a>
+        <a onclick="goToScreen(6)">Turno Jugador</a>
+        <a onclick="goToScreen(7)">Casos Especiales</a>
+    </nav>
+
+    <button id="prev-btn" class="nav-btn" onclick="prevScreen()">&#8592;</button>
+    <button id="next-btn" class="nav-btn" onclick="nextScreen()">&#8594;</button>
+
+    <div class="container">
+        
+        <!-- PANTALLA 1: PREPARACIÓN -->
+        <div class="screen active" id="screen-0">
+            <h1>El Despertar (Preparación)</h1>
+            <p>Sigue estos pasos para invocar al Esbirro (Minion) antes de comenzar a jugar:</p>
+            <ul>
+                <li><span class="highlight">Tablero y Mazos:</span> Baraja los mazos y prepara el tablero y cartas de historia como de costumbre.</li>
+                <li><span class="highlight">Explorador del Esbirro:</span> Roba cartas del mazo del Esbirro hasta que salga el <strong>primer personaje de coste 3</strong>. Ponlo en juego en su área. Devuelve el resto de las cartas robadas y baraja su mazo de nuevo.</li>
+                <li><span class="highlight">Dominios:</span> El Esbirro comienza con <strong>4 Dominios</strong>. El cuarto Dominio es el <em>Dominio de Eventos</em>.</li>
+                <li><span class="highlight">Mano Inicial:</span> Roba 5 cartas para el Esbirro. Tú (el jugador) robas 8 cartas y quédate con 5. Vincula las 3 sobrantes a tus dominios.</li>
+                <li><span class="highlight">Recursos:</span>
+                    <ul>
+                        <li>Pon un dado de 6 caras en cada Dominio del Esbirro mostrando un <strong>2</strong>.</li>
+                        <li><em>Penalización:</em> Si tú (el jugador) decides hacer 'Mulligan' con tu mano inicial, los dados del Esbirro empezarán en <strong>3</strong>.</li>
+                    </ul>
+                </li>
+                <li><span class="highlight">Jugador Inicial:</span> Lanza una ficha. Calavera = Empieza el Esbirro. Lupa = Empiezas tú.</li>
+            </ul>
+        </div>
+
+        <!-- PANTALLA 2: REGLAS BASE -->
+        <div class="screen" id="screen-1">
+            <h1>Leyes Arcanas (Reglas Generales)</h1>
+            <p>El Esbirro toma decisiones basándose siempre en el <strong>Potencial (CP)</strong> de las cartas.</p>
+            
+            <div class="alert-box">
+                <strong>Cálculo del Potencial:</strong> Coste + Valor de Habilidad
+            </div>
+            <p>Si hay un empate, utiliza el siguiente orden de modificadores (sumando los iconos) hasta romperlo:</p>
+            <ol>
+                <li>Coste + Habilidad + <span class="highlight">Investigación</span></li>
+                <li>Coste + Habilidad + Investigación + <span class="highlight">Terror</span></li>
+                <li>Coste + Habilidad + Investigación + Terror + <span class="highlight">Combate</span></li>
+                <li>Coste + Habilidad + Investigación + Terror + Combate + <span class="highlight">Arcano</span></li>
+            </ol>
+            <p><em>Nota:</em> Si el empate persiste en todo, el Esbirro elegirá la carta que le otorgue mayor beneficio en esa situación.</p>
+
+            <h3>Reglas de Oro del Esbirro:</h3>
+            <ul>
+                <li>Al asignar a historias o defender, siempre selecciona desde el de <strong>Mayor Potencial al Menor</strong>.</li>
+                <li>Al hacer daño o volver loco a un personaje del <strong>Jugador</strong>, elegirá al de <strong>Mayor Potencial</strong>.</li>
+                <li>Si tiene que elegir a un personaje <strong>propio</strong> para recibir daño o volverse loco, elegirá al de <strong>Menor Potencial</strong>.</li>
+            </ul>
+        </div>
+
+        <!-- PANTALLA 3: RESTAURACIÓN Y ROBO -->
+        <div class="screen" id="screen-2">
+            <h1>Turno del Esbirro: Recuperación y Robo</h1>
+            <h2>1. Fase de Recuperación</h2>
+            <ul>
+                <li>Restablece todos los dominios agotados del Esbirro.</li>
+                <li>Prepara (endereza) todos sus personajes agotados.</li>
+                <li><span class="highlight">Personajes locos:</span> Voltea <strong>UN</strong> personaje loco (lo deja agotado). Siempre elegirá voltear a su personaje con el <strong>mayor Potencial</strong>.</li>
+            </ul>
+
+            <h2>2. Fase de Robo</h2>
+            <ul>
+                <li>Roba <strong>2 cartas</strong> del mazo del Esbirro y añádelas a su mano.</li>
+            </ul>
+        </div>
+
+        <!-- PANTALLA 4: EVENTOS Y RECURSOS -->
+        <div class="screen" id="screen-3">
+            <h1>Turno del Esbirro: Eventos y Recursos</h1>
+            
+            <h2>Gestión de la Reserva de Eventos</h2>
+            <p>A medida que el Esbirro roba cartas de Evento, estas se colocan <strong>boca arriba</strong> debajo de su 4º Dominio (Dominio de Eventos) formando la "Reserva de Eventos".</p>
+            <ul>
+                <li>Evaluará los eventos jugables (cuando se cumplan las condiciones).</li>
+                <li>Los jugará en la fase donde causen el <strong>mayor impacto en tu contra</strong> (Historia, Operaciones u otras).</li>
+                <li><span class="highlight">Pago:</span> Para jugar un Evento, el Esbirro agotará el <strong>Dominio de Eventos</strong>. Si el coste del Evento es mayor que los recursos de este Dominio, usará uno de sus Dominios normales.</li>
+                <li>El Dominio de Eventos <em>nunca</em> se usa para pagar cartas que no sean Eventos.</li>
+            </ul>
+
+            <h2>3. Fase de Recursos</h2>
+            <p>Usa un dado de 6 caras (d6) para determinar cuál de sus Dominios normales aumenta.</p>
+            <ul>
+                <li>Lanza el dado:</li>
+                <li><strong>1 o 2:</strong> Aumenta el Dominio 1 en un recurso.</li>
+                <li><strong>3 o 4:</strong> Aumenta el Dominio 2 en un recurso.</li>
+                <li><strong>5 o 6:</strong> Aumenta el Dominio 3 en un recurso.</li>
+            </ul>
+            <div class="alert-box">
+                Si el Esbirro tiene más de 3 Dominios (por efectos de cartas), lanza el dado hasta obtener un número válido para los dominios existentes. ¡El Dominio de Eventos NO aumenta en esta fase!
+            </div>
+        </div>
+
+        <!-- PANTALLA 5: OPERACIONES -->
+        <div class="screen" id="screen-4">
+            <h1>4. Fase de Operaciones</h1>
+            <p>El Esbirro siempre intentará agotar <strong>2 Dominios</strong>. Intentará agotar 3 si la Reserva de Eventos está vacía o no tiene eventos válidos.</p>
+            
+            <p>El orden de prioridad para gastar sus dominios es:</p>
+            <ul>
+                <li><strong>1er Dominio Agotado:</strong> Juega el Personaje con el <em>mayor Potencial</em> que pueda pagar. Si no hay, juega la carta de Apoyo de mayor coste.</li>
+                <li><strong>2º Dominio Agotado:</strong> Juega la carta de Apoyo válido de mayor coste. Si no hay, juega el siguiente Personaje con <em>mayor Potencial</em>.</li>
+                <li><strong>3er Dominio Agotado (si aplica):</strong> Acción de carta válida o un Evento de alto coste.</li>
+            </ul>
+
+            <div class="alert-box">
+                <strong>Notas Importantes:</strong><br>
+                - Las cartas de Apoyo "válidas" significan que se pueden jugar (ej. si requiere vincular a un personaje y no hay, no se juega).<br>
+                - Si un personaje tiene una "Acción" que requiere agotarlo, el Esbirro debe usarla ahora (antes de ir a las Historias), ya que si se agota, no podrá participar en combate.
+            </div>
+        </div>
+
+        <!-- PANTALLA 6: HISTORIA (ESBIRRO) -->
+        <div class="screen" id="screen-5">
+            <h1>5. Fase de Historia</h1>
+            <p>El Esbirro debe decidir qué personajes retiene para defender en tu turno y cuáles asigna al ataque. Lo hace alternativamente, bajando por la lista de <strong>mayor a menor Potencial</strong>.</p>
+            
+            <h3>Proceso de Asignación:</h3>
+            <ol>
+                <li>El Esbirro asigna sus personajes (empezando por el de mayor potencial) a la historia donde él tenga <strong>más iconos</strong> impresos. Si no tiene iconos, elige la historia más cercana a la <em>Zona Profunda</em>.</li>
+                <li>Continuará asignando a <strong>esa misma historia</strong> hasta que el número de personajes del Esbirro iguale al número de personajes que TÚ (el jugador) tienes disponibles para defender.</li>
+                <li>Una vez igualado, pasará a la <strong>siguiente historia</strong> con más iconos (o la historia a la izquierda de la anterior) y repetirá el proceso.</li>
+                <li>Usará <strong>TODOS</strong> sus personajes listos: ya sea asignándolos a historias o reteniéndolos alternativamente.</li>
+            </ol>
+
+            <p><span class="highlight">Ejemplo de distribución:</span> Si tú tienes 2 personajes defensores y él tiene 6 listos. Él empieza asignando a la historia central.<br>
+            - #1 Mayor Potencial: Retenido (defensa)<br>
+            - #2 Potencial: Ataca la central<br>
+            - #3 Potencial: Retenido<br>
+            - #4 Potencial: Ataca la central (ya igualó tus 2 defensores)<br>
+            - #5 Potencial: Retenido<br>
+            - #6 Potencial: Ataca la historia más lejana a la Zona Profunda.</p>
+
+            <div class="alert-box">
+                <strong>¿Qué pasa si el Esbirro GANA una historia?</strong><br>
+                Solo ejecutará el efecto de la carta de historia si le beneficia claramente. ¡Además, su Dominio de Eventos aumenta +1 recurso!
+            </div>
+        </div>
+
+        <!-- PANTALLA 7: TURNO DEL JUGADOR -->
+        <div class="screen" id="screen-6">
+            <h1>Turno del Jugador: Reacciones del Esbirro</h1>
+            <p>Tus fases de Restauración, Robo, Recursos y Operaciones transcurren de forma habitual.</p>
+
+            <h2>Fase de Historia (Defensa del Esbirro)</h2>
+            <p>Tú asignas tus personajes a las historias de manera normal. El Esbirro responderá así:</p>
+            <ul>
+                <li>El Esbirro <strong>defenderá TODAS las historias</strong> a las que te hayas asignado.</li>
+                <li>Usará sus personajes disponibles de <strong>mayor a menor Potencial</strong>.</li>
+                <li>Empezará a defender la historia donde <strong>TÚ (el jugador) tengas más iconos</strong>.</li>
+            </ul>
+
+            <p><span class="highlight">Ejemplo de Defensa:</span> Atacas la Historia 1 y la Historia 3. El Esbirro tiene 4 defensores. Tú tienes 2 iconos en la Historia 3 y ninguno en el resto.</p>
+            <ol>
+                <li>Su Defensor de #1 Potencial va a la Historia 3 (porque tienes más iconos ahí).</li>
+                <li>Su Defensor de #2 Potencial va a la Historia 1.</li>
+                <li>Su Defensor de #3 Potencial va a la Historia 3.</li>
+                <li>Su Defensor de #4 Potencial va a la Historia 1.</li>
+            </ol>
+
+            <p><em>Resolución de luchas:</em> Sigue las reglas oficiales de La Llamada de Cthulhu LCG. Recuerda que si el Esbirro debe dañar a tus personajes, elige al de mayor Potencial. Si recibe daño él, elige al suyo de menor Potencial.</p>
+        </div>
+
+        <!-- PANTALLA 8: CASOS ESPECIALES -->
+        <div class="screen" id="screen-7">
+            <h1>Textos Prohibidos (Reglas Especiales)</h1>
+            <ul>
+                <li><span class="highlight">Sin personajes:</span> Si en algún momento el Esbirro no tiene personajes en juego ni en la mano, se reinicia su área de juego (como en la preparación), pero busca en su mazo un personaje de <strong>coste 4</strong> en lugar de 3.</li>
+                <li><span class="highlight">Cartas Vinculadas:</span> Se vincularán siempre al personaje del Esbirro con el <strong>mayor Potencial</strong> que no tenga ya una carta vinculada. Si todos tienen, al de mayor Potencial general.</li>
+                <li><span class="highlight">Conspiraciones:</span> Cuando el Esbirro juega una carta de Conspiración, la coloca cerca de la <em>Zona Profunda</em> (haciéndola la primera carta de historia). Si la juegas tú, va lo más lejos posible (en el otro extremo).</li>
+                <li><span class="highlight">Nuevos Dominios por Efectos:</span> Si una carta añade un Dominio, pon un dado sobre él y cualquier carta prevista debajo. A partir de entonces, generará recursos con la tirada de dado igual que el resto.</li>
+                <li><span class="highlight">Día y Noche:</span> El Esbirro solo cambiará de Día a Noche (o viceversa) si le otorga un beneficio directo de la carta.</li>
+                <li><span class="highlight">Personajes Únicos:</span> Aplican las reglas estándar; sólo uno en juego.</li>
+                <li><span class="highlight">Personajes "Letargados":</span> Se tratan como en las reglas oficiales (pueden ponerse boca arriba en la historia).</li>
+            </ul>
+            <div class="alert-box">
+                <em>"Juega las cartas del Esbirro como si fueran tuyas; a menudo te harás daño a ti mismo, pero no te acobardes, es parte de la locura..."</em>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        let currentScreen = 0;
+        const screens = document.querySelectorAll('.screen');
+        const navLinks = document.querySelectorAll('nav a');
+
+        function updateUI() {
+            screens.forEach((s, index) => {
+                s.classList.remove('active');
+                if(index === currentScreen) s.classList.add('active');
+            });
+
+            navLinks.forEach((link, index) => {
+                link.classList.remove('active-link');
+                if(index === currentScreen) link.classList.add('active-link');
+            });
+
+            document.getElementById('prev-btn').style.display = currentScreen === 0 ? 'none' : 'block';
+            document.getElementById('next-btn').style.display = currentScreen === screens.length - 1 ? 'none' : 'block';
+            
+            window.scrollTo(0, 0);
+        }
+
+        function nextScreen() {
+            if (currentScreen < screens.length - 1) {
+                currentScreen++;
+                updateUI();
+            }
+        }
+
+        function prevScreen() {
+            if (currentScreen > 0) {
+                currentScreen--;
+                updateUI();
+            }
+        }
+
+        function goToScreen(index) {
+            currentScreen = index;
+            updateUI();
+        }
+
+        // Initialize UI
+        updateUI();
+
+// Lógica de la música de fondo
+        const bgMusic = document.getElementById('bg-music');
+        const musicBtn = document.getElementById('music-btn');
+
+        function toggleMusic() {
+            if (bgMusic.paused) {
+                bgMusic.play();
+                musicBtn.innerHTML = "🔊 Música On";
+                musicBtn.style.color = "var(--accent-color)";
+                musicBtn.style.textShadow = "0 0 8px rgba(138, 3, 3, 0.8)";
+            } else {
+                bgMusic.pause();
+                musicBtn.innerHTML = "🔇 Música Off";
+                musicBtn.style.color = "var(--text-color)";
+                musicBtn.style.textShadow = "none";
+            }
+        }
+
+    </script>
+</body>
+</html>
